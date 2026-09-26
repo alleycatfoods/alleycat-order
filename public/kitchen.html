@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#111">
+<title>AlleyCat Kitchen</title>
+<style>
+  :root { --bg:#141210; --panel:#1f1c19; --line:#3a352f; --ink:#f6f1ea; --muted:#a39a8e; --brand:#e5572f; --ok:#35a54a; --warn:#f2b233; }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html, body { margin:0; height:100%; background:var(--bg); color:var(--ink); font:17px/1.35 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  button { font:inherit; cursor:pointer; }
+  .top { display:flex; align-items:center; gap:12px; padding:12px 16px; border-bottom:1px solid var(--line); position:sticky; top:0; background:var(--bg); z-index:3; }
+  .top h1 { font-size:20px; margin:0; flex:1; } .top h1 small { color:var(--muted); font-weight:500; margin-left:8px; }
+  .pill { border:1px solid var(--line); background:var(--panel); color:var(--ink); padding:10px 16px; border-radius:999px; font-weight:700; }
+  .pill.paused { background:var(--warn); color:#111; border-color:var(--warn); }
+  .dot { width:10px; height:10px; border-radius:50%; background:var(--ok); display:inline-block; margin-right:6px; }
+  .dot.bad { background:#d33; }
+  .wrap { display:grid; grid-template-columns: 1fr 320px; gap:16px; padding:16px; min-height:calc(100% - 66px); }
+  @media (max-width: 820px) { .wrap { grid-template-columns: 1fr; } }
+  .col h2 { margin:0 0 10px; font-size:14px; letter-spacing:.12em; text-transform:uppercase; color:var(--muted); }
+  .grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(260px, 1fr)); gap:14px; align-items:start; }
+  .t { background:var(--panel); border:1px solid var(--line); border-radius:14px; overflow:hidden; }
+  .t.fresh { animation: flash 1s ease 3; }
+  @keyframes flash { 50% { border-color:var(--brand); box-shadow:0 0 0 3px var(--brand); } }
+  .th { display:flex; justify-content:space-between; align-items:baseline; padding:12px 14px; background:#2a2622; }
+  .th .n { font-size:30px; font-weight:900; } .th .nm { font-size:19px; font-weight:700; margin-left:8px; }
+  .th .age { font-weight:800; color:var(--muted); } .th .age.late { color:#ff6b5a; }
+  .ti { padding:10px 14px; }
+  .li { padding:8px 0; border-bottom:1px dashed var(--line); font-size:19px; } .li:last-child { border:0; }
+  .li b { color:var(--brand); margin-right:6px; }
+  .li .o { display:flex; flex-wrap:wrap; gap:6px; margin-top:4px; }
+  .li .o span { font-size:14px; font-weight:700; background:#3a2a20; color:#ffcfb8; padding:3px 9px; border-radius:6px; }
+  .ta { display:flex; gap:8px; padding:0 14px 14px; }
+  .big { flex:1; padding:16px; border:0; border-radius:10px; font-weight:800; font-size:18px; color:#fff; background:var(--ok); }
+  .ghost { padding:16px; border:1px solid var(--line); border-radius:10px; background:none; color:var(--muted); font-weight:700; }
+  .ready .th { background:#1f3a24; }
+  .empty { color:var(--muted); padding:40px 10px; text-align:center; border:1px dashed var(--line); border-radius:14px; }
+  .overlay { position:fixed; inset:0; background:rgba(10,9,8,.96); display:flex; align-items:center; justify-content:center; flex-direction:column; gap:18px; z-index:20; text-align:center; padding:20px; }
+  .overlay input { font-size:32px; letter-spacing:.3em; text-align:center; width:220px; padding:12px; border-radius:12px; border:1px solid var(--line); background:var(--panel); color:var(--ink); }
+  .cta { padding:18px 34px; font-size:20px; font-weight:800; border:0; border-radius:14px; background:var(--brand); color:#fff; }
+  .drawer { position:fixed; top:0; right:0; bottom:0; width:min(420px, 100%); background:var(--panel); border-left:1px solid var(--line); z-index:10; transform:translateX(105%); transition:transform .2s; overflow:auto; padding:18px; }
+  .drawer.open { transform:none; }
+  .so { display:flex; justify-content:space-between; align-items:center; padding:14px 0; border-bottom:1px solid var(--line); font-size:18px; }
+  .so small { color:var(--muted); display:block; font-size:13px; }
+  .tog { padding:10px 14px; border-radius:999px; border:1px solid var(--line); background:none; color:var(--ok); font-weight:800; min-width:110px; }
+  .tog.out { background:#5a1d14; color:#ffb4a6; border-color:#8a2c1f; }
+  .err { color:#ff8a7a; min-height:22px; }
+</style>
+</head>
+<body>
+<div class="top">
+  <h1>AlleyCat Kitchen <small id="clock"></small></h1>
+  <span id="conn"><span class="dot"></span><small id="connTxt">Live</small></span>
+  <button class="pill" id="soldBtn">Sold out</button>
+  <button class="pill" id="pauseBtn">Online ordering: ON</button>
+</div>
+<div class="wrap">
+  <section class="col"><h2 id="newH">New orders</h2><div class="grid" id="new"></div></section>
+  <section class="col"><h2 id="readyH">Ready for pickup</h2><div id="ready" style="display:grid;gap:12px"></div></section>
+</div>
+
+<div class="drawer" id="drawer">
+  <div style="display:flex;justify-content:space-between;align-items:center"><h2 style="margin:0">Sold out</h2><button class="pill" id="closeDrawer">Done</button></div>
+  <p style="color:var(--muted)">Tap to mark sold out. It greys out on the phone menu right away.</p>
+  <div id="soList"></div>
+</div>
+
+<div class="overlay" id="login" style="display:none">
+  <h1 style="margin:0">AlleyCat Kitchen</h1>
+  <input id="pin" type="password" inputmode="numeric" autocomplete="off" placeholder="PIN">
+  <div class="err" id="pinErr"></div>
+  <button class="cta" id="pinGo">Unlock</button>
+</div>
+<div class="overlay" id="start" style="display:none">
+  <h1 style="margin:0">Start service</h1>
+  <p style="color:var(--muted);max-width:420px">Tap to turn on the new-order chime and keep the screen awake. Leave this screen open and plugged in during service.</p>
+  <button class="cta" id="startGo">🔔 Start</button>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let orders = [], seen = null, paused = false, audio, wakeLock, fresh = new Set();
+
+async function api(path, body) {
+  const r = await fetch(path, body ? { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) } : {});
+  if (r.status === 401) { showLogin(); throw new Error('auth'); }
+  return r.json();
+}
+
+// ---- sound + wake ----
+function chime() {
+  if (!audio) return;
+  const now = audio.currentTime;
+  [0, 0.18, 0.36].forEach((t, i) => {
+    const o = audio.createOscillator(), g = audio.createGain();
+    o.frequency.value = [880, 1175, 1568][i]; o.type = 'sine';
+    g.gain.setValueAtTime(0.0001, now + t); g.gain.exponentialRampToValueAtTime(0.6, now + t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, now + t + 0.35);
+    o.connect(g).connect(audio.destination); o.start(now + t); o.stop(now + t + 0.4);
+  });
+}
+async function keepAwake() { try { wakeLock = await navigator.wakeLock?.request('screen'); } catch (e) {} }
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { keepAwake(); poll(); } });
+$('startGo').onclick = () => {
+  try { audio = new (window.AudioContext || window.webkitAudioContext)(); audio.resume(); } catch (e) {}
+  keepAwake(); chime(); $('start').style.display = 'none';
+};
+
+// ---- auth ----
+function showLogin() { $('login').style.display = 'flex'; $('pin').focus(); }
+$('pinGo').onclick = async () => {
+  const r = await fetch('/api/kitchen/login', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ pin: $('pin').value }) });
+  const d = await r.json();
+  if (!d.ok) { $('pinErr').textContent = d.error || 'Wrong PIN'; return; }
+  $('login').style.display = 'none'; $('start').style.display = 'flex'; poll();
+};
+$('pin').onkeydown = e => { if (e.key === 'Enter') $('pinGo').click(); };
+
+// ---- orders ----
+const age = s => { const m = Math.floor((Date.now() / 1000 - s) / 60); return m < 1 ? 'now' : m + ' min'; };
+function ticket(o, ready) {
+  return `<div class="t ${ready ? 'ready' : ''} ${fresh.has(o.id) ? 'fresh' : ''}">
+    <div class="th"><div><span class="n">#${o.order_no}</span><span class="nm">${esc(o.name)}</span></div>
+      <span class="age ${!ready && (Date.now()/1000 - o.placed_at) > 600 ? 'late' : ''}">${age(ready ? o.ready_at || o.placed_at : o.placed_at)}</span></div>
+    <div class="ti">${o.items.map(i => `<div class="li"><b>${i.qty}×</b>${esc(i.name)}${i.options.length ? `<div class="o">${i.options.map(x => `<span>${esc(x)}</span>`).join('')}</div>` : ''}</div>`).join('')}</div>
+    <div class="ta">${ready
+      ? `<button class="ghost" data-id="${o.id}" data-s="new">Undo</button><button class="big" style="background:#4a4540" data-id="${o.id}" data-s="done">Picked up ✓</button>`
+      : `<button class="big" data-id="${o.id}" data-s="ready">Ready → text ${o.phone_last4 ? '•' + o.phone_last4 : 'customer'}</button>`}</div></div>`;
+}
+function render() {
+  const nw = orders.filter(o => o.status === 'new').sort((a, b) => a.order_no - b.order_no);
+  const rd = orders.filter(o => o.status === 'ready').sort((a, b) => a.order_no - b.order_no);
+  $('new').innerHTML = nw.map(o => ticket(o, false)).join('') || '<div class="empty">No open orders. The chime sounds when one comes in.</div>';
+  $('ready').innerHTML = rd.map(o => ticket(o, true)).join('') || '<div class="empty">Nothing waiting</div>';
+  $('newH').textContent = `New orders (${nw.length})`;
+  $('readyH').textContent = `Ready for pickup (${rd.length})`;
+  $('pauseBtn').textContent = paused ? '⏸ Online ordering: PAUSED' : 'Online ordering: ON';
+  $('pauseBtn').classList.toggle('paused', paused);
+}
+async function poll() {
+  try {
+    const d = await api('/api/kitchen/orders');
+    if (d.error) throw new Error(d.error);
+    paused = d.paused; orders = d.orders;
+    const ids = new Set(orders.map(o => o.id));
+    if (seen) { const added = orders.filter(o => !seen.has(o.id) && o.status === 'new'); if (added.length) { added.forEach(o => fresh.add(o.id)); chime(); setTimeout(() => { added.forEach(o => fresh.delete(o.id)); }, 3500); } }
+    seen = ids;
+    $('conn').querySelector('.dot').classList.remove('bad'); $('connTxt').textContent = 'Live';
+    render();
+  } catch (e) {
+    if (e.message !== 'auth') { $('conn').querySelector('.dot').classList.add('bad'); $('connTxt').textContent = 'Reconnecting…'; }
+  }
+}
+document.body.addEventListener('click', async e => {
+  const b = e.target.closest('button[data-s]'); if (!b) return;
+  b.disabled = true;
+  const o = orders.find(x => x.id === b.dataset.id); if (o) { o.status = b.dataset.s; render(); }
+  try { await api(`/api/kitchen/orders/${b.dataset.id}/status`, { status: b.dataset.s }); } catch (err) { alert('Could not update. Check Wi-Fi.'); }
+  poll();
+});
+
+// ---- pause + sold out ----
+$('pauseBtn').onclick = async () => {
+  const next = !paused;
+  if (next && !confirm('Pause online ordering? Customers will see "ordering paused" and can\'t check out.')) return;
+  await api('/api/kitchen/pause', { paused: next }); paused = next; render();
+};
+async function loadSold() {
+  const d = await api('/api/kitchen/items');
+  $('soList').innerHTML = d.items.map(i => `<div class="so"><div>${esc(i.name)}${i.option ? '<small>Add-on / sauce</small>' : ''}</div>
+    <button class="tog ${i.sold_out ? 'out' : ''}" data-p="${i.id}" data-v="${!i.sold_out}">${i.sold_out ? 'SOLD OUT' : 'Available'}</button></div>`).join('');
+}
+$('soList').onclick = async e => {
+  const b = e.target.closest('button[data-p]'); if (!b) return;
+  b.disabled = true; await api(`/api/kitchen/items/${b.dataset.p}/soldout`, { sold_out: b.dataset.v === 'true' }); loadSold();
+};
+$('soldBtn').onclick = () => { $('drawer').classList.add('open'); loadSold(); };
+$('closeDrawer').onclick = () => $('drawer').classList.remove('open');
+
+setInterval(() => { $('clock').textContent = new Date().toLocaleTimeString([], { hour:'numeric', minute:'2-digit' }); }, 1000);
+setInterval(poll, 4000);
+setInterval(render, 30000);
+fetch('/api/kitchen/orders').then(r => { if (r.status === 401) showLogin(); else { $('start').style.display = 'flex'; poll(); } });
+</script>
+</body>
+</html>

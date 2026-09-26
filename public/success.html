@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#1d1a16">
+<title>Your AlleyCat Order</title>
+<style>
+  body { margin:0; background:#faf7f2; color:#1d1a16; font:16px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding:32px 16px; text-align:center; }
+  .brand { font-size:13px; letter-spacing:.14em; text-transform:uppercase; color:#c8401e; font-weight:800; }
+  .num { font-size:72px; font-weight:900; line-height:1; margin:14px 0 4px; }
+  .who { font-size:22px; font-weight:700; }
+  .status { display:inline-block; margin:16px 0 6px; padding:10px 18px; border-radius:999px; font-weight:800; background:#fff3e0; color:#9a4d00; }
+  .status.ready { background:#2e7d32; color:#fff; font-size:20px; }
+  .card { background:#fff; border:1px solid #e8e1d6; border-radius:14px; max-width:420px; margin:18px auto; padding:6px 16px; text-align:left; }
+  .row { display:flex; justify-content:space-between; gap:10px; padding:10px 0; border-bottom:1px solid #eee7dc; }
+  .row:last-child { border:0; } .o { color:#6f675d; font-size:14px; }
+  .muted { color:#6f675d; } a { color:#c8401e; font-weight:700; }
+</style>
+</head>
+<body>
+  <div class="brand">AlleyCat Foods</div>
+  <div id="body"><p class="muted" style="margin-top:40px">Confirming your payment…</p></div>
+<script>
+const id = new URLSearchParams(location.search).get('session_id');
+const money = c => '$' + (c / 100).toFixed(2);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+try { sessionStorage.removeItem('cart2:breakfast'); sessionStorage.removeItem('cart2:lunch'); } catch (e) {}
+let tries = 0;
+async function load() {
+  if (!id) return;
+  try {
+    const d = await (await fetch('/api/order/' + encodeURIComponent(id))).json();
+    if (!d.paid) { if (++tries < 10) setTimeout(load, 1500); return; }
+    const ready = d.status === 'ready' || d.status === 'done';
+    document.getElementById('body').innerHTML = `
+      <div class="num">#${d.order_no}</div><div class="who">${esc(d.name)}</div>
+      <div class="status ${ready ? 'ready' : ''}">${ready ? '✅ Ready at the window!' : '👨‍🍳 Cooking now'}</div>
+      <p class="muted">${ready ? 'Come grab it!' : `We'll text you${d.phone_last4 ? ' at •••' + d.phone_last4 : ''} when it's ready.`}</p>
+      <div class="card">
+        ${d.items.map(i => `<div class="row"><div><b>${i.qty}×</b> ${esc(i.name)}${i.options.length ? `<div class="o">${esc(i.options.join(', '))}</div>` : ''}</div></div>`).join('')}
+        <div class="row muted"><span>Subtotal</span><span>${money(d.subtotal)}</span></div>
+        <div class="row muted"><span>Tax</span><span>${money(d.tax)}</span></div>
+        <div class="row"><b>Total paid</b><b>${money(d.total)}</b></div>
+      </div>
+      <p><a href="/">Back to menu</a></p>`;
+    if (!ready) setTimeout(load, 15000);
+  } catch (e) { if (++tries < 10) setTimeout(load, 2000); }
+}
+load();
+</script>
+</body>
+</html>
