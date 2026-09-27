@@ -16,6 +16,9 @@
   .row { display:flex; justify-content:space-between; gap:10px; padding:10px 0; border-bottom:1px solid #eee7dc; }
   .row:last-child { border:0; } .o { color:#6f675d; font-size:14px; }
   .muted { color:#6f675d; } a { color:#c8401e; font-weight:700; }
+  .keep { max-width:420px; margin:10px auto 0; padding:12px 14px; border-radius:12px; background:#fff; border:2px solid #c8401e; font-weight:700; }
+  .keep button { margin-top:8px; padding:10px 16px; border:0; border-radius:999px; background:#c8401e; color:#fff; font-weight:800; font-size:15px; }
+  body.ready { animation: glow 1s ease 4; } @keyframes glow { 50% { background:#d7f5dc; } }
 </style>
 </head>
 <body>
@@ -26,17 +29,28 @@ const id = new URLSearchParams(location.search).get('session_id');
 const money = c => '$' + (c / 100).toFixed(2);
 const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 try { sessionStorage.removeItem('cart2:breakfast'); sessionStorage.removeItem('cart2:lunch'); } catch (e) {}
-let tries = 0;
+let tries = 0, wasReady = false, audio = null, lastReady = null;
+function beep() {
+  if (!audio) return;
+  const t = audio.currentTime;
+  [0, .25, .5].forEach(d => { const o = audio.createOscillator(), g = audio.createGain(); o.frequency.value = 1046; g.gain.setValueAtTime(.0001, t + d); g.gain.exponentialRampToValueAtTime(.7, t + d + .02); g.gain.exponentialRampToValueAtTime(.0001, t + d + .2); o.connect(g).connect(audio.destination); o.start(t + d); o.stop(t + d + .22); });
+}
+window.enableSound = btn => { try { audio = new (window.AudioContext || window.webkitAudioContext)(); audio.resume(); beep(); btn.textContent = '🔔 Sound alert on'; btn.disabled = true; } catch (e) {} };
 async function load() {
   if (!id) return;
   try {
     const d = await (await fetch('/api/order/' + encodeURIComponent(id))).json();
     if (!d.paid) { if (++tries < 10) setTimeout(load, 1500); return; }
     const ready = d.status === 'ready' || d.status === 'done';
+    if (ready && lastReady === false) { beep(); document.body.classList.add('ready'); if (navigator.vibrate) navigator.vibrate([300, 150, 300]); }
+    lastReady = ready;
+    document.title = ready ? `✅ READY: AlleyCat #${d.order_no}` : `Cooking: AlleyCat #${d.order_no}`;
     document.getElementById('body').innerHTML = `
       <div class="num">#${d.order_no}</div><div class="who">${esc(d.name)}</div>
       <div class="status ${ready ? 'ready' : ''}">${ready ? '✅ Ready at the window!' : '👨‍🍳 Cooking now'}</div>
       <p class="muted">${ready ? 'Come grab it!' : `We'll text you${d.phone_last4 ? ' at •••' + d.phone_last4 : ''} when it's ready.`}</p>
+      ${ready ? '' : `<div class="keep">📱 Keep this page open. It switches to <span style="color:#2e7d32">READY</span> the moment your food is up.<br>
+        <button onclick="enableSound(this)" ${audio ? 'disabled' : ''}>${audio ? '🔔 Sound alert on' : '🔔 Tap for a sound alert too'}</button></div>`}
       <div class="card">
         ${d.items.map(i => `<div class="row"><div><b>${i.qty}×</b> ${esc(i.name)}${i.options.length ? `<div class="o">${esc(i.options.join(', '))}</div>` : ''}</div></div>`).join('')}
         <div class="row muted"><span>Subtotal</span><span>${money(d.subtotal)}</span></div>
@@ -44,7 +58,7 @@ async function load() {
         <div class="row"><b>Total paid</b><b>${money(d.total)}</b></div>
       </div>
       <p><a href="/">Back to menu</a></p>`;
-    if (!ready) setTimeout(load, 15000);
+    if (!ready) setTimeout(load, 8000);
   } catch (e) { if (++tries < 10) setTimeout(load, 2000); }
 }
 load();

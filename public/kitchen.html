@@ -36,6 +36,8 @@
   .big { flex:1; padding:16px; border:0; border-radius:10px; font-weight:800; font-size:18px; color:#fff; background:var(--ok); }
   .ghost { padding:16px; border:1px solid var(--line); border-radius:10px; background:none; color:var(--muted); font-weight:700; }
   .ready .th { background:#1f3a24; }
+  .warn { background:#5a1d14; color:#ffcfc4; font-weight:800; padding:10px 14px; font-size:16px; }
+  .sent { color:#8fd49b; font-weight:700; padding:8px 14px 0; font-size:14px; }
   .empty { color:var(--muted); padding:40px 10px; text-align:center; border:1px dashed var(--line); border-radius:14px; }
   .overlay { position:fixed; inset:0; background:rgba(10,9,8,.96); display:flex; align-items:center; justify-content:center; flex-direction:column; gap:18px; z-index:20; text-align:center; padding:20px; }
   .overlay input { font-size:32px; letter-spacing:.3em; text-align:center; width:220px; padding:12px; border-radius:12px; border:1px solid var(--line); background:var(--panel); color:var(--ink); }
@@ -124,6 +126,8 @@ function ticket(o, ready) {
   return `<div class="t ${ready ? 'ready' : ''} ${fresh.has(o.id) ? 'fresh' : ''}">
     <div class="th"><div><span class="n">#${o.order_no}</span><span class="nm">${esc(o.name)}</span></div>
       <span class="age ${!ready && (Date.now()/1000 - o.placed_at) > 600 ? 'late' : ''}">${age(ready ? o.ready_at || o.placed_at : o.placed_at)}</span></div>
+    ${ready && o.text_status === 'failed' ? `<div class="warn">⚠ Text didn't send. Call out #${o.order_no} ${esc(o.name)}</div>` : ''}
+    ${ready && o.text_status === 'sent' ? `<div class="sent">✓ Customer texted</div>` : ''}
     <div class="ti">${o.items.map(i => `<div class="li"><b>${i.qty}×</b>${esc(i.name)}${i.options.length ? `<div class="o">${i.options.map(x => `<span>${esc(x)}</span>`).join('')}</div>` : ''}</div>`).join('')}</div>
     <div class="ta">${ready
       ? `<button class="ghost" data-id="${o.id}" data-s="new">Undo</button><button class="big" style="background:#4a4540" data-id="${o.id}" data-s="done">Picked up ✓</button>`
