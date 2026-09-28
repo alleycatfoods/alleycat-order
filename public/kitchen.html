@@ -121,7 +121,7 @@ async function api(path, body) {
 
 // ---- sound + screen awake: unlocked by the first tap anywhere (browser rule) ----
 function chime() {
-  if (!audio) return;
+  if (!audio || muted) return;
   const now = audio.currentTime;
   [0, 0.18, 0.36].forEach((t, i) => {
     const o = audio.createOscillator(), g = audio.createGain();
@@ -131,13 +131,29 @@ function chime() {
   });
 }
 async function keepAwake() { try { wakeLock = await navigator.wakeLock?.request('screen'); } catch (e) {} }
+// Sound on/off: remembered on this iPad across reloads
+let muted = false, unlockedAt = 0;
+try { muted = localStorage.getItem('kitchenMuted') === '1'; } catch (e) {}
+function soundLabel() {
+  const b = $('soundBtn');
+  if (!audio) { b.textContent = '🔇 Tap for sound'; b.classList.add('mute'); return; }
+  b.textContent = muted ? '🔇 Sound off' : '🔔 Sound on';
+  b.classList.toggle('mute', muted);
+}
 function unlock() {
-  if (!audio) { try { audio = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {} }
-  audio?.resume(); keepAwake();
-  $('soundBtn').textContent = '🔔 Sound on'; $('soundBtn').classList.remove('mute');
+  if (!audio) { try { audio = new (window.AudioContext || window.webkitAudioContext)(); unlockedAt = Date.now(); } catch (e) {} }
+  audio?.resume(); keepAwake(); soundLabel();
 }
 document.addEventListener('pointerdown', unlock, { once: true });
-$('soundBtn').onclick = () => { unlock(); chime(); };
+$('soundBtn').onclick = () => {
+  const firstTap = !audio || Date.now() - unlockedAt < 1500; // the tap that turned sound on shouldn't also turn it off
+  unlock();
+  muted = firstTap ? false : !muted;
+  try { localStorage.setItem('kitchenMuted', muted ? '1' : '0'); } catch (e) {}
+  soundLabel();
+  if (!muted) chime();
+};
+soundLabel();
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { keepAwake(); poll(); } });
 
 // ---- auth ----
