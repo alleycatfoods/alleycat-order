@@ -55,6 +55,7 @@ async function load() {
         ${d.items.map(i => `<div class="row"><div><b>${i.qty}×</b> ${esc(i.name)}${i.options.length ? `<div class="o">${esc(i.options.join(', '))}</div>` : ''}</div></div>`).join('')}
         <div class="row muted"><span>Subtotal</span><span>${money(d.subtotal)}</span></div>
         <div class="row muted"><span>Tax</span><span>${money(d.tax)}</span></div>
+        ${d.tip ? `<div class="row muted"><span>Tip, thank you!</span><span>${money(d.tip)}</span></div>` : ''}
         <div class="row"><b>Total paid</b><b>${money(d.total)}</b></div>
       </div>
       <p><a href="/">Back to menu</a></p>`;

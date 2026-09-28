@@ -62,6 +62,7 @@
   .dr .n { font-weight:900; font-size:18px; min-width:44px; }
   .dr .d { flex:1; min-width:0; } .dr .d small { display:block; color:var(--muted); font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .dr .tx { font-size:13px; font-weight:800; white-space:nowrap; } .dr .tx.ok { color:#8fd49b; } .dr .tx.bad { color:#ff8a7a; }
+  .tipTag { color:#8fd49b; font-weight:800; font-size:13px; padding:0 11px 6px; }
   .dr .undo { border:1px solid var(--line); background:none; color:var(--muted); border-radius:8px; padding:7px 10px; font-weight:700; font-size:14px; }
 
   /* overlays + drawer */
@@ -178,6 +179,7 @@ function ticket(o) {
     <div class="th"><div class="who"><span class="n">#${o.order_no}</span><span class="nm">${esc(o.name)}</span>${isNew ? '<span class="tag">NEW</span>' : ''}</div>
       <span class="age ${m >= 10 ? 'r' : m >= 5 ? 'y' : ''}">${ageTxt(m)}</span></div>
     <div class="ti">${o.items.map(i => `<div class="li"><b>${i.qty}×</b>${esc(i.name)}${i.options.length ? `<div class="o">${i.options.map(x => `<span>${esc(x)}</span>`).join('')}</div>` : ''}</div>`).join('')}</div>
+    ${o.tip ? `<div class="tipTag">💵 ${'$' + (o.tip / 100).toFixed(2)} tip</div>` : ''}
     <div class="ta">${isNew
       ? `<button class="big" data-id="${o.id}" data-s="cooking">▶ START</button>`
       : `<button class="big" data-id="${o.id}" data-s="ready">✓ Ready → text ${o.phone_last4 ? '•' + o.phone_last4 : 'customer'}</button>`}</div></div>`;
@@ -191,7 +193,7 @@ function render() {
   $('counts').innerHTML = `<span class="nw">${nNew} new</span> · <b>${open.length - nNew}</b> cooking`;
   $('doneN').textContent = done.length;
   $('doneList').innerHTML = done.map(o => `<div class="dr"><span class="n">#${o.order_no}</span>
-      <div class="d">${esc(o.name)} · ${o.ready_at ? timeTxt(o.ready_at) : ''}<small>${o.items.map(i => `${i.qty}× ${esc(i.name)}`).join(', ')}</small></div>
+      <div class="d">${esc(o.name)} · ${o.ready_at ? timeTxt(o.ready_at) : ''}<small>${o.tip ? '💵 $' + (o.tip / 100).toFixed(2) + ' tip · ' : ''}${o.items.map(i => `${i.qty}× ${esc(i.name)}`).join(', ')}</small></div>
       ${o.text_status === 'sent' ? '<span class="tx ok">✓ texted</span>' : o.text_status === 'failed' ? '<span class="tx bad">⚠ not texted</span>' : ''}
       <button class="undo" data-id="${o.id}" data-s="cooking">Undo</button></div>`).join('') || '<div class="dr" style="color:var(--muted)">Nothing completed yet today</div>';
   $('pauseBtn').textContent = paused ? '⏸ Ordering: PAUSED' : 'Ordering: ON';

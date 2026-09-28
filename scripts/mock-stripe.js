@@ -49,8 +49,9 @@ module.exports = {
   mountPayPage(app) {
     app.get('/mock-pay', (req, res) => {
       const s = sessions[req.query.s];
-      const sub = s.line_items.reduce((t, l) => t + priceAmt(l.price) * l.quantity, 0);
-      const tax = s.line_items.reduce((t, l) => t + Math.round(priceAmt(l.price) * l.quantity * 0.0825), 0);
+      const amt = l => l.price_data ? l.price_data.unit_amount : priceAmt(l.price);
+      const sub = s.line_items.reduce((t, l) => t + amt(l) * l.quantity, 0);
+      const tax = s.line_items.reduce((t, l) => t + (l.tax_rates ? Math.round(amt(l) * l.quantity * 0.0825) : 0), 0);
       const pi = 'pi_mock_' + n;
       intents[pi] = { id: pi, status: 'succeeded', amount: sub + tax, created: Math.floor(Date.now() / 1000), metadata: { ...s.payment_intent_data.metadata } };
       Object.assign(s, { pi, payment_status: 'paid', amount_subtotal: sub, total_details: { amount_tax: tax },

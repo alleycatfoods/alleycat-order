@@ -45,6 +45,7 @@ module.exports = function appRouter(stripe, catalog, orders) {
       const taxRate = await catalog.taxRate();
       const counts = new Map(); // price → qty (merges identical prices incl. paid options)
       const cart = [];
+      let subtotal = 0;
       for (const line of req.body.cart || []) {
         const item = items.get(String(line.product));
         const q = Math.floor(Number(line.quantity));
@@ -54,22 +55,30 @@ module.exports = function appRouter(stripe, catalog, orders) {
         for (const k of opts) {
           const o = item.options.find(x => x.key === k);
           if (o.sold_out) return res.status(409).json({ error: `Sorry, ${o.label} just sold out.` });
-          if (o.price) counts.set(o.price, (counts.get(o.price) || 0) + q);
+          if (o.price) { counts.set(o.price, (counts.get(o.price) || 0) + q); subtotal += o.amount * q; }
         }
         counts.set(item.price, (counts.get(item.price) || 0) + q);
+        subtotal += item.amount * q;
         cart.push({ p: item.id, o: opts, q });
       }
       if (!cart.length) return res.status(400).json({ error: 'Your cart is empty' });
 
+      // Optional tip: recomputed here from the real subtotal; no sales tax on tips
+      const t = req.body.tip || {};
+      const tipCents = t.kind === 'flat1' ? 100 : t.kind === 'pct10' ? Math.round(subtotal * 0.10) : t.kind === 'pct15' ? Math.round(subtotal * 0.15)
+        : t.kind === 'custom' ? Math.max(0, Math.min(10000, Math.round(Number(t.cents) || 0))) : 0;
+
       const meta = { app: 'alleycat-menus', menu };
+      const line_items = [...counts].map(([price, quantity]) => ({ price, quantity, tax_rates: [taxRate] }));
+      if (tipCents > 0) line_items.push({ price_data: { currency: 'usd', unit_amount: tipCents, product_data: { name: 'Tip (thank you!)' } }, quantity: 1 });
       const session = await stripe.checkout.sessions.create({
         mode: 'payment',
-        line_items: [...counts].map(([price, quantity]) => ({ price, quantity, tax_rates: [taxRate] })),
+        line_items,
         phone_number_collection: { enabled: true },
         custom_fields: [{ key: 'name', label: { type: 'custom', custom: 'Name for pickup' }, type: 'text', text: { maximum_length: 30 } }],
         custom_text: { submit: { message: "We'll text this number when your order is ready at the window." } },
         metadata: meta,
-        payment_intent_data: { metadata: { ...meta, ...orders.cartToMetadata(cart) } },
+        payment_intent_data: { metadata: { ...meta, ...orders.cartToMetadata(cart), ...(tipCents > 0 ? { tip: String(tipCents) } : {}) } },
         success_url: `${origin(req)}/order/success?session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${origin(req)}/${menu}`,
       });
@@ -82,7 +91,7 @@ module.exports = function appRouter(stripe, catalog, orders) {
       const o = await orders.finalize(req.params.sessionId);
       if (!o.paid) return res.json({ paid: false });
       const t = o.ticket;
-      res.json({ paid: true, order_no: t.order_no, name: t.name, status: t.status, phone_last4: t.phone_last4, items: t.items, subtotal: o.subtotal, tax: o.tax, total: t.total });
+      res.json({ paid: true, order_no: t.order_no, name: t.name, status: t.status, phone_last4: t.phone_last4, items: t.items, subtotal: o.subtotal - t.tip, tax: o.tax, tip: t.tip, total: t.total });
     } catch (e) { res.status(404).json({ error: 'Order not found' }); }
   });
 

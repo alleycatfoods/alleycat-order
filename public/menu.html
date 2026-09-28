@@ -54,6 +54,14 @@
   .line .x { border:0; background:none; color:var(--muted); font-size:22px; padding:0 4px; cursor:pointer; }
   .sum { display:flex; justify-content:space-between; padding:6px 0; color:var(--muted); }
   .sum.total { color:var(--ink); font-weight:800; font-size:19px; padding-top:10px; }
+  .tip { margin:14px 0 4px; }
+  .tip .lbl { font-weight:700; margin-bottom:8px; } .tip .lbl small { color:var(--muted); font-weight:500; }
+  .tips { display:grid; grid-template-columns:repeat(4, 1fr); gap:8px; }
+  .tips button { padding:10px 4px; border-radius:10px; border:1px solid var(--line); background:#fff; font-weight:700; font-size:15px; color:var(--ink); line-height:1.15; cursor:pointer; }
+  .tips button small { display:block; font-weight:500; font-size:12px; color:var(--muted); }
+  .tips button.on { background:var(--ink); border-color:var(--ink); color:#fff; } .tips button.on small { color:#ddd; }
+  .tipc { display:none; margin-top:8px; align-items:center; gap:6px; font-size:17px; }
+  .tipc.show { display:flex; } .tipc input { flex:1; font-size:17px; padding:10px; border:1px solid var(--line); border-radius:10px; }
   .close { position:absolute; right:12px; top:12px; border:0; background:#f2ede5; width:34px; height:34px; border-radius:50%; font-size:18px; cursor:pointer; }
 </style>
 </head>
@@ -176,9 +184,13 @@ function openOptions(it) {
   draw(); openSheet(el);
 }
 
+let tip = { kind: null, custom: 0 }; // kind: null | 'flat1' | 'pct10' | 'pct15' | 'custom'
+const tipCents = sub => tip.kind === 'flat1' ? 100 : tip.kind === 'pct10' ? Math.round(sub * 0.10) : tip.kind === 'pct15' ? Math.round(sub * 0.15) : tip.kind === 'custom' ? tip.custom : 0;
+
 function openCart() {
   const el = $('cartSheet');
   const t = totals();
+  const tp = tipCents(t.sub), grand = t.total + tp;
   if (!t.count) return closeSheets();
   el.innerHTML = `<button class="close" aria-label="Close">✕</button><h3>Your order</h3><div class="sub">${menu[0].toUpperCase() + menu.slice(1)} menu</div>
     ${cart.map((l, idx) => { const it = byId[l.product]; return `<div class="line"><b>${l.quantity}×</b><div class="l">${esc(it.name)}
@@ -186,19 +198,36 @@ function openCart() {
       <div>${money(lineUnit(l) * l.quantity)}</div><button class="x" data-i="${idx}" aria-label="Remove">✕</button></div>`; }).join('')}
     <div style="margin-top:10px"><div class="sum"><span>Subtotal</span><span>${money(t.sub)}</span></div>
     <div class="sum"><span>Tax (${data.tax_percent}%)</span><span>${money(t.tax)}</span></div>
-    <div class="sum total"><span>Total</span><span>${money(t.total)}</span></div></div>
+    <div class="tip"><div class="lbl">Add a tip? <small>(optional)</small></div>
+      <div class="tips">
+        <button data-k="flat1" class="${tip.kind === 'flat1' ? 'on' : ''}">$1</button>
+        <button data-k="pct10" class="${tip.kind === 'pct10' ? 'on' : ''}">10%<small>${money(Math.round(t.sub * .10))}</small></button>
+        <button data-k="pct15" class="${tip.kind === 'pct15' ? 'on' : ''}">15%<small>${money(Math.round(t.sub * .15))}</small></button>
+        <button data-k="custom" class="${tip.kind === 'custom' ? 'on' : ''}">Custom${tip.kind === 'custom' && tip.custom ? `<small>${money(tip.custom)}</small>` : ''}</button>
+      </div>
+      <div class="tipc ${tip.kind === 'custom' ? 'show' : ''}">$<input id="tipIn" type="number" inputmode="decimal" min="0" step="0.50" placeholder="0.00" value="${tip.custom ? (tip.custom / 100).toFixed(2) : ''}"></div>
+    </div>
+    ${tp ? `<div class="sum"><span>Tip</span><span>${money(tp)}</span></div>` : ''}
+    <div class="sum total"><span>Total</span><span>${money(grand)}</span></div></div>
     <p style="color:var(--muted);font-size:14px">Next: pay with Apple Pay, Google Pay or card. Add your name and mobile number and we'll text you when it's ready.</p>
-    <button class="btn" id="pay"><span>Pay</span><span>${money(t.total)}</span></button>`;
+    <button class="btn" id="pay"><span>Pay</span><span>${money(grand)}</span></button>`;
   el.querySelector('.close').onclick = closeSheets;
   el.querySelectorAll('.x').forEach(b => b.onclick = () => { cart.splice(Number(b.dataset.i), 1); save(); update(); openCart(); });
   el.querySelector('#pay').onclick = checkout;
+  el.querySelectorAll('.tips button').forEach(b => b.onclick = () => {
+    tip.kind = tip.kind === b.dataset.k ? null : b.dataset.k; // tap again to remove the tip
+    const scroll = el.scrollTop; openCart(); el.scrollTop = scroll;
+    if (tip.kind === 'custom') el.querySelector('#tipIn').focus();
+  });
+  const tin = el.querySelector('#tipIn');
+  tin.onchange = () => { tip.custom = Math.max(0, Math.min(10000, Math.round((parseFloat(tin.value) || 0) * 100))); const scroll = el.scrollTop; openCart(); el.scrollTop = scroll; };
   openSheet(el);
 }
 
 async function checkout(e) {
   const btn = e.currentTarget; btn.disabled = true; btn.firstElementChild.textContent = 'Opening secure checkout…';
   try {
-    const r = await fetch(`/api/menu/${menu}/checkout`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ cart }) });
+    const r = await fetch(`/api/menu/${menu}/checkout`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ cart, tip: { kind: tip.kind, cents: tip.kind === 'custom' ? tip.custom : 0 } }) });
     const d = await r.json();
     if (d.url) { location.href = d.url; return; }
     alert(d.error || 'Checkout failed'); load();
