@@ -7,38 +7,64 @@
 <meta name="theme-color" content="#111">
 <title>AlleyCat Kitchen</title>
 <style>
-  :root { --bg:#141210; --panel:#1f1c19; --line:#3a352f; --ink:#f6f1ea; --muted:#a39a8e; --brand:#e5572f; --ok:#35a54a; --warn:#f2b233; }
+  :root { --bg:#141210; --panel:#1f1c19; --line:#3a352f; --ink:#f6f1ea; --muted:#a39a8e; --brand:#e5572f; --ok:#35a54a; --warn:#f2b233; --red:#e0321f; }
   * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
-  html, body { margin:0; height:100%; background:var(--bg); color:var(--ink); font:17px/1.35 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  html, body { margin:0; height:100%; background:var(--bg); color:var(--ink); font:17px/1.3 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  body { display:flex; flex-direction:column; height:100dvh; overflow:hidden; }
   button { font:inherit; cursor:pointer; }
-  .top { display:flex; align-items:center; gap:12px; padding:12px 16px; border-bottom:1px solid var(--line); position:sticky; top:0; background:var(--bg); z-index:3; }
-  .top h1 { font-size:20px; margin:0; flex:1; } .top h1 small { color:var(--muted); font-weight:500; margin-left:8px; }
-  .pill { border:1px solid var(--line); background:var(--panel); color:var(--ink); padding:10px 16px; border-radius:999px; font-weight:700; }
+
+  /* top bar */
+  .top { display:flex; align-items:center; gap:8px; padding:8px 12px; border-bottom:1px solid var(--line); flex:none; flex-wrap:wrap; }
+  .top h1 { font-size:18px; margin:0; flex:1; white-space:nowrap; } .top h1 small { color:var(--muted); font-weight:500; margin-left:6px; }
+  .counts { color:var(--muted); font-weight:700; font-size:15px; white-space:nowrap; }
+  .counts b { color:var(--ink); } .counts .nw { color:#ff7a66; }
+  .pill { border:1px solid var(--line); background:var(--panel); color:var(--ink); padding:8px 13px; border-radius:999px; font-weight:700; font-size:15px; white-space:nowrap; }
   .pill.paused { background:var(--warn); color:#111; border-color:var(--warn); }
-  .dot { width:10px; height:10px; border-radius:50%; background:var(--ok); display:inline-block; margin-right:6px; }
+  .pill.mute { color:var(--warn); border-color:#6b5520; }
+  .dot { width:10px; height:10px; border-radius:50%; background:var(--ok); display:inline-block; }
   .dot.bad { background:#d33; }
-  .wrap { display:grid; grid-template-columns: 1fr 320px; gap:16px; padding:16px; min-height:calc(100% - 66px); }
-  @media (max-width: 820px) { .wrap { grid-template-columns: 1fr; } }
-  .col h2 { margin:0 0 10px; font-size:14px; letter-spacing:.12em; text-transform:uppercase; color:var(--muted); }
-  .grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(260px, 1fr)); gap:14px; align-items:start; }
-  .t { background:var(--panel); border:1px solid var(--line); border-radius:14px; overflow:hidden; }
-  .t.fresh { animation: flash 1s ease 3; }
-  @keyframes flash { 50% { border-color:var(--brand); box-shadow:0 0 0 3px var(--brand); } }
-  .th { display:flex; justify-content:space-between; align-items:baseline; padding:12px 14px; background:#2a2622; }
-  .th .n { font-size:30px; font-weight:900; } .th .nm { font-size:19px; font-weight:700; margin-left:8px; }
-  .th .age { font-weight:800; color:var(--muted); } .th .age.late { color:#ff6b5a; }
-  .ti { padding:10px 14px; }
-  .li { padding:8px 0; border-bottom:1px dashed var(--line); font-size:19px; } .li:last-child { border:0; }
-  .li b { color:var(--brand); margin-right:6px; }
-  .li .o { display:flex; flex-wrap:wrap; gap:6px; margin-top:4px; }
-  .li .o span { font-size:14px; font-weight:700; background:#3a2a20; color:#ffcfb8; padding:3px 9px; border-radius:6px; }
-  .ta { display:flex; gap:8px; padding:0 14px 14px; }
-  .big { flex:1; padding:16px; border:0; border-radius:10px; font-weight:800; font-size:18px; color:#fff; background:var(--ok); }
-  .ghost { padding:16px; border:1px solid var(--line); border-radius:10px; background:none; color:var(--muted); font-weight:700; }
-  .ready .th { background:#1f3a24; }
-  .warn { background:#5a1d14; color:#ffcfc4; font-weight:800; padding:10px 14px; font-size:16px; }
-  .sent { color:#8fd49b; font-weight:700; padding:8px 14px 0; font-size:14px; }
-  .empty { color:var(--muted); padding:40px 10px; text-align:center; border:1px dashed var(--line); border-radius:14px; }
+
+  /* main ticket area */
+  main { flex:1; overflow-y:auto; padding:10px; -webkit-overflow-scrolling:touch; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(230px, 1fr)); gap:10px; align-items:start; }
+  .t { background:var(--panel); border:2px solid var(--line); border-radius:12px; overflow:hidden; }
+  .th { display:flex; justify-content:space-between; align-items:center; padding:7px 11px; background:#2a2622; gap:6px; }
+  .th .n { font-size:26px; font-weight:900; } .th .nm { font-size:17px; font-weight:700; margin-left:6px; }
+  .th .who { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .age { font-weight:800; font-size:15px; color:var(--muted); white-space:nowrap; }
+  .age.y { color:var(--warn); } .age.r { color:#ff6b5a; }
+  .ti { padding:4px 11px 6px; }
+  .li { padding:5px 0; border-bottom:1px dashed var(--line); font-size:18px; } .li:last-child { border:0; }
+  .li b { color:var(--brand); margin-right:5px; }
+  .li .o { display:flex; flex-wrap:wrap; gap:4px; margin-top:3px; }
+  .li .o span { font-size:13px; font-weight:700; background:#3a2a20; color:#ffcfb8; padding:2px 7px; border-radius:5px; }
+  .ta { padding:0 11px 11px; }
+  .big { width:100%; padding:13px; border:0; border-radius:9px; font-weight:800; font-size:17px; color:#fff; background:var(--ok); }
+
+  /* NEW = not started: red + pulsing */
+  .t.new { border-color:var(--red); animation:pulse 1.6s ease-in-out infinite; }
+  .t.new .th { background:var(--red); }
+  .t.new .th .age { color:#fff; }
+  .t.new .big { background:var(--red); }
+  .t.new .tag { font-size:12px; font-weight:900; letter-spacing:.08em; background:#fff; color:var(--red); padding:2px 6px; border-radius:4px; margin-left:6px; vertical-align:3px; }
+  @keyframes pulse { 0%,100% { box-shadow:0 0 0 0 rgba(224,50,31,.0); } 50% { box-shadow:0 0 0 6px rgba(224,50,31,.55); } }
+
+  .empty { color:var(--muted); padding:50px 10px; text-align:center; border:1px dashed var(--line); border-radius:12px; }
+  .more { position:absolute; left:50%; transform:translateX(-50%); bottom:62px; background:var(--brand); color:#fff; border:0; border-radius:999px; padding:9px 18px; font-weight:800; box-shadow:0 4px 14px rgba(0,0,0,.5); z-index:4; display:none; }
+
+  /* completed bar */
+  .done { flex:none; border-top:1px solid var(--line); background:#191715; }
+  .doneBar { width:100%; display:flex; justify-content:space-between; align-items:center; padding:12px 14px; background:none; border:0; color:var(--muted); font-weight:800; font-size:15px; }
+  .doneBar b { color:#8fd49b; }
+  .doneList { max-height:0; overflow-y:auto; transition:max-height .2s; }
+  .done.open .doneList { max-height:55vh; }
+  .dr { display:flex; align-items:center; gap:10px; padding:10px 14px; border-top:1px solid #2a2622; font-size:16px; }
+  .dr .n { font-weight:900; font-size:18px; min-width:44px; }
+  .dr .d { flex:1; min-width:0; } .dr .d small { display:block; color:var(--muted); font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .dr .tx { font-size:13px; font-weight:800; white-space:nowrap; } .dr .tx.ok { color:#8fd49b; } .dr .tx.bad { color:#ff8a7a; }
+  .dr .undo { border:1px solid var(--line); background:none; color:var(--muted); border-radius:8px; padding:7px 10px; font-weight:700; font-size:14px; }
+
+  /* overlays + drawer */
   .overlay { position:fixed; inset:0; background:rgba(10,9,8,.96); display:flex; align-items:center; justify-content:center; flex-direction:column; gap:18px; z-index:20; text-align:center; padding:20px; }
   .overlay input { font-size:32px; letter-spacing:.3em; text-align:center; width:220px; padding:12px; border-radius:12px; border:1px solid var(--line); background:var(--panel); color:var(--ink); }
   .cta { padding:18px 34px; font-size:20px; font-weight:800; border:0; border-radius:14px; background:var(--brand); color:#fff; }
@@ -54,13 +80,19 @@
 <body>
 <div class="top">
   <h1>AlleyCat Kitchen <small id="clock"></small></h1>
-  <span id="conn"><span class="dot"></span><small id="connTxt">Live</small></span>
+  <span class="counts" id="counts"></span>
+  <span class="dot" id="dot" title="Live"></span>
+  <button class="pill mute" id="soundBtn">🔇 Tap for sound</button>
   <button class="pill" id="soldBtn">Sold out</button>
-  <button class="pill" id="pauseBtn">Online ordering: ON</button>
+  <button class="pill" id="pauseBtn">Ordering: ON</button>
 </div>
-<div class="wrap">
-  <section class="col"><h2 id="newH">New orders</h2><div class="grid" id="new"></div></section>
-  <section class="col"><h2 id="readyH">Ready for pickup</h2><div id="ready" style="display:grid;gap:12px"></div></section>
+
+<main id="main"><div class="grid" id="open"></div></main>
+<button class="more" id="more"></button>
+
+<div class="done" id="done">
+  <button class="doneBar" id="doneBar"><span>✓ Completed today (<b id="doneN">0</b>)</span><span id="doneArrow">▲ Show</span></button>
+  <div class="doneList" id="doneList"></div>
 </div>
 
 <div class="drawer" id="drawer">
@@ -75,16 +107,11 @@
   <div class="err" id="pinErr"></div>
   <button class="cta" id="pinGo">Unlock</button>
 </div>
-<div class="overlay" id="start" style="display:none">
-  <h1 style="margin:0">Start service</h1>
-  <p style="color:var(--muted);max-width:420px">Tap to turn on the new-order chime and keep the screen awake. Leave this screen open and plugged in during service.</p>
-  <button class="cta" id="startGo">🔔 Start</button>
-</div>
 
 <script>
 const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-let orders = [], seen = null, paused = false, audio, wakeLock, fresh = new Set();
+let orders = [], seen = null, paused = false, audio = null, wakeLock, busy = false;
 
 async function api(path, body) {
   const r = await fetch(path, body ? { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) } : {});
@@ -92,7 +119,7 @@ async function api(path, body) {
   return r.json();
 }
 
-// ---- sound + wake ----
+// ---- sound + screen awake: unlocked by the first tap anywhere (browser rule) ----
 function chime() {
   if (!audio) return;
   const now = audio.currentTime;
@@ -104,11 +131,14 @@ function chime() {
   });
 }
 async function keepAwake() { try { wakeLock = await navigator.wakeLock?.request('screen'); } catch (e) {} }
+function unlock() {
+  if (!audio) { try { audio = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {} }
+  audio?.resume(); keepAwake();
+  $('soundBtn').textContent = '🔔 Sound on'; $('soundBtn').classList.remove('mute');
+}
+document.addEventListener('pointerdown', unlock, { once: true });
+$('soundBtn').onclick = () => { unlock(); chime(); };
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { keepAwake(); poll(); } });
-$('startGo').onclick = () => {
-  try { audio = new (window.AudioContext || window.webkitAudioContext)(); audio.resume(); } catch (e) {}
-  keepAwake(); chime(); $('start').style.display = 'none';
-};
 
 // ---- auth ----
 function showLogin() { $('login').style.display = 'flex'; $('pin').focus(); }
@@ -116,54 +146,82 @@ $('pinGo').onclick = async () => {
   const r = await fetch('/api/kitchen/login', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ pin: $('pin').value }) });
   const d = await r.json();
   if (!d.ok) { $('pinErr').textContent = d.error || 'Wrong PIN'; return; }
-  $('login').style.display = 'none'; $('start').style.display = 'flex'; poll();
+  $('login').style.display = 'none'; unlock(); poll();
 };
 $('pin').onkeydown = e => { if (e.key === 'Enter') $('pinGo').click(); };
 
-// ---- orders ----
-const age = s => { const m = Math.floor((Date.now() / 1000 - s) / 60); return m < 1 ? 'now' : m + ' min'; };
-function ticket(o, ready) {
-  return `<div class="t ${ready ? 'ready' : ''} ${fresh.has(o.id) ? 'fresh' : ''}">
-    <div class="th"><div><span class="n">#${o.order_no}</span><span class="nm">${esc(o.name)}</span></div>
-      <span class="age ${!ready && (Date.now()/1000 - o.placed_at) > 600 ? 'late' : ''}">${age(ready ? o.ready_at || o.placed_at : o.placed_at)}</span></div>
-    ${ready && o.text_status === 'failed' ? `<div class="warn">⚠ Text didn't send. Call out #${o.order_no} ${esc(o.name)}</div>` : ''}
-    ${ready && o.text_status === 'sent' ? `<div class="sent">✓ Customer texted</div>` : ''}
+// ---- rendering ----
+const mins = s => Math.floor((Date.now() / 1000 - s) / 60);
+const ageTxt = m => m < 1 ? 'now' : m + ' min';
+const timeTxt = s => new Date(s * 1000).toLocaleTimeString([], { hour:'numeric', minute:'2-digit' });
+
+function ticket(o) {
+  const isNew = o.status === 'new';
+  const m = mins(o.placed_at);
+  return `<div class="t ${isNew ? 'new' : 'cooking'}">
+    <div class="th"><div class="who"><span class="n">#${o.order_no}</span><span class="nm">${esc(o.name)}</span>${isNew ? '<span class="tag">NEW</span>' : ''}</div>
+      <span class="age ${m >= 10 ? 'r' : m >= 5 ? 'y' : ''}">${ageTxt(m)}</span></div>
     <div class="ti">${o.items.map(i => `<div class="li"><b>${i.qty}×</b>${esc(i.name)}${i.options.length ? `<div class="o">${i.options.map(x => `<span>${esc(x)}</span>`).join('')}</div>` : ''}</div>`).join('')}</div>
-    <div class="ta">${ready
-      ? `<button class="ghost" data-id="${o.id}" data-s="new">Undo</button><button class="big" style="background:#4a4540" data-id="${o.id}" data-s="done">Picked up ✓</button>`
-      : `<button class="big" data-id="${o.id}" data-s="ready">Ready → text ${o.phone_last4 ? '•' + o.phone_last4 : 'customer'}</button>`}</div></div>`;
+    <div class="ta">${isNew
+      ? `<button class="big" data-id="${o.id}" data-s="cooking">▶ START</button>`
+      : `<button class="big" data-id="${o.id}" data-s="ready">✓ Ready → text ${o.phone_last4 ? '•' + o.phone_last4 : 'customer'}</button>`}</div></div>`;
 }
+
 function render() {
-  const nw = orders.filter(o => o.status === 'new').sort((a, b) => a.order_no - b.order_no);
-  const rd = orders.filter(o => o.status === 'ready').sort((a, b) => a.order_no - b.order_no);
-  $('new').innerHTML = nw.map(o => ticket(o, false)).join('') || '<div class="empty">No open orders. The chime sounds when one comes in.</div>';
-  $('ready').innerHTML = rd.map(o => ticket(o, true)).join('') || '<div class="empty">Nothing waiting</div>';
-  $('newH').textContent = `New orders (${nw.length})`;
-  $('readyH').textContent = `Ready for pickup (${rd.length})`;
-  $('pauseBtn').textContent = paused ? '⏸ Online ordering: PAUSED' : 'Online ordering: ON';
+  const open = orders.filter(o => o.status === 'new' || o.status === 'cooking').sort((a, b) => a.order_no - b.order_no);
+  const done = orders.filter(o => o.status === 'ready' || o.status === 'done').sort((a, b) => (b.ready_at || b.placed_at) - (a.ready_at || a.placed_at) || b.order_no - a.order_no);
+  const nNew = open.filter(o => o.status === 'new').length;
+  $('open').innerHTML = open.map(ticket).join('') || '<div class="empty" style="grid-column:1/-1">No open orders. New ones show up here in red.</div>';
+  $('counts').innerHTML = `<span class="nw">${nNew} new</span> · <b>${open.length - nNew}</b> cooking`;
+  $('doneN').textContent = done.length;
+  $('doneList').innerHTML = done.map(o => `<div class="dr"><span class="n">#${o.order_no}</span>
+      <div class="d">${esc(o.name)} · ${o.ready_at ? timeTxt(o.ready_at) : ''}<small>${o.items.map(i => `${i.qty}× ${esc(i.name)}`).join(', ')}</small></div>
+      ${o.text_status === 'sent' ? '<span class="tx ok">✓ texted</span>' : o.text_status === 'failed' ? '<span class="tx bad">⚠ not texted</span>' : ''}
+      <button class="undo" data-id="${o.id}" data-s="cooking">Undo</button></div>`).join('') || '<div class="dr" style="color:var(--muted)">Nothing completed yet today</div>';
+  $('pauseBtn').textContent = paused ? '⏸ Ordering: PAUSED' : 'Ordering: ON';
   $('pauseBtn').classList.toggle('paused', paused);
+  updateMore();
 }
+
+// "+N more" when tickets are hidden below the fold
+function updateMore() {
+  const main = $('main'), bottom = main.getBoundingClientRect().bottom;
+  const hidden = [...document.querySelectorAll('#open .t')].filter(t => t.getBoundingClientRect().top > bottom - 40).length;
+  const b = $('more');
+  b.style.display = hidden ? 'block' : 'none';
+  b.style.bottom = ($('done').offsetHeight + 12) + 'px';
+  b.textContent = `▼ ${hidden} more order${hidden > 1 ? 's' : ''}`;
+}
+$('main').addEventListener('scroll', updateMore);
+window.addEventListener('resize', updateMore);
+$('more').onclick = () => $('main').scrollBy({ top: $('main').clientHeight * 0.8, behavior: 'smooth' });
+
 async function poll() {
+  if (busy) return;
   try {
     const d = await api('/api/kitchen/orders');
     if (d.error) throw new Error(d.error);
     paused = d.paused; orders = d.orders;
-    const ids = new Set(orders.map(o => o.id));
-    if (seen) { const added = orders.filter(o => !seen.has(o.id) && o.status === 'new'); if (added.length) { added.forEach(o => fresh.add(o.id)); chime(); setTimeout(() => { added.forEach(o => fresh.delete(o.id)); }, 3500); } }
-    seen = ids;
-    $('conn').querySelector('.dot').classList.remove('bad'); $('connTxt').textContent = 'Live';
+    if (seen && orders.some(o => !seen.has(o.id) && o.status === 'new')) chime();
+    seen = new Set(orders.map(o => o.id));
+    $('dot').classList.remove('bad');
     render();
-  } catch (e) {
-    if (e.message !== 'auth') { $('conn').querySelector('.dot').classList.add('bad'); $('connTxt').textContent = 'Reconnecting…'; }
-  }
+  } catch (e) { if (e.message !== 'auth') $('dot').classList.add('bad'); }
 }
+
 document.body.addEventListener('click', async e => {
   const b = e.target.closest('button[data-s]'); if (!b) return;
-  b.disabled = true;
-  const o = orders.find(x => x.id === b.dataset.id); if (o) { o.status = b.dataset.s; render(); }
-  try { await api(`/api/kitchen/orders/${b.dataset.id}/status`, { status: b.dataset.s }); } catch (err) { alert('Could not update. Check Wi-Fi.'); }
-  poll();
+  b.disabled = true; busy = true;
+  const o = orders.find(x => x.id === b.dataset.id); if (o) { o.status = b.dataset.s; if (b.dataset.s === 'ready') o.ready_at = Math.floor(Date.now() / 1000); render(); }
+  try { await api(`/api/kitchen/orders/${b.dataset.id}/status`, { status: b.dataset.s }); } catch (err) { if (err.message !== 'auth') alert('Could not update. Check Wi-Fi.'); }
+  busy = false; poll();
 });
+
+$('doneBar').onclick = () => {
+  const open = $('done').classList.toggle('open');
+  $('doneArrow').textContent = open ? '▼ Hide' : '▲ Show';
+  setTimeout(updateMore, 250);
+};
 
 // ---- pause + sold out ----
 $('pauseBtn').onclick = async () => {
@@ -183,10 +241,17 @@ $('soList').onclick = async e => {
 $('soldBtn').onclick = () => { $('drawer').classList.add('open'); loadSold(); };
 $('closeDrawer').onclick = () => $('drawer').classList.remove('open');
 
+// ---- auto-reload when a new version is deployed (stays logged in) ----
+let build = null;
+async function checkVersion() {
+  try { const { v } = await (await fetch('/api/version', { cache: 'no-store' })).json(); if (build && v !== build) location.reload(); build = v; } catch (e) {}
+}
+
 setInterval(() => { $('clock').textContent = new Date().toLocaleTimeString([], { hour:'numeric', minute:'2-digit' }); }, 1000);
 setInterval(poll, 4000);
 setInterval(render, 30000);
-fetch('/api/kitchen/orders').then(r => { if (r.status === 401) showLogin(); else { $('start').style.display = 'flex'; poll(); } });
+setInterval(checkVersion, 30000); checkVersion();
+fetch('/api/kitchen/orders').then(r => { if (r.status === 401) showLogin(); else poll(); });
 </script>
 </body>
 </html>

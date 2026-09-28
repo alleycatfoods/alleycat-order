@@ -92,6 +92,9 @@ module.exports = function appRouter(stripe, catalog, orders) {
   const guard = (req, res, next) => (process.env.KITCHEN_PIN && authed(req)) ? next() : res.status(401).json({ error: 'PIN required' });
 
   r.get('/kitchen', page('kitchen.html'));
+  // Build id: the kitchen screen reloads itself when this changes (new deploy)
+  const BUILD = process.env.RENDER_GIT_COMMIT || String(Date.now());
+  r.get('/api/version', (req, res) => res.json({ v: BUILD }));
   r.post('/api/kitchen/login', (req, res) => {
     const pin = String(req.body.pin || '');
     if (!process.env.KITCHEN_PIN) return res.status(500).json({ error: 'KITCHEN_PIN is not set on the server' });
@@ -105,7 +108,7 @@ module.exports = function appRouter(stripe, catalog, orders) {
     catch (e) { console.error(e.message); res.status(500).json({ error: 'Could not load orders' }); }
   });
   r.post('/api/kitchen/orders/:id/status', guard, async (req, res) => {
-    if (!['new', 'ready', 'done'].includes(req.body.status)) return res.status(400).json({ error: 'Bad status' });
+    if (!['new', 'cooking', 'ready', 'done'].includes(req.body.status)) return res.status(400).json({ error: 'Bad status' });
     try { res.json(await orders.setStatus(req.params.id, req.body.status)); } catch (e) { res.status(400).json({ error: e.message }); }
   });
   r.get('/api/kitchen/items', guard, async (req, res) => res.json({ paused: await catalog.isPaused(), items: await catalog.allSellable() }));
